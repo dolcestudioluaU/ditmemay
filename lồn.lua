@@ -1,0 +1,222 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+-- Tạo ScreenGui
+local vyroHub = Instance.new("ScreenGui")
+vyroHub.Name = "VYRO_HUB"
+vyroHub.Parent = LocalPlayer:WaitForChild("PlayerGui")
+vyroHub.ResetOnSpawn = false
+vyroHub.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Tạo Background bao phủ toàn màn hình
+local background = Instance.new("Frame")
+background.Size = UDim2.new(1, 0, 1, 0)
+background.Position = UDim2.new(0, 0, 0, 0)
+background.BackgroundColor3 = Color3.fromRGB(220, 220, 230)
+background.BackgroundTransparency = 0.95
+background.BorderSizePixel = 0
+background.ZIndex = 1
+background.Parent = vyroHub
+
+-- Tạo hiệu ứng mờ
+local blur = Instance.new("BlurEffect")
+blur.Size = 12
+blur.Parent = Lighting
+
+-- Tạo Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.8, 0, 0.15, 0) -- Giảm kích thước để text không bị cắt
+title.Position = UDim2.new(0.1, 0, 0.4, 0)
+title.BackgroundTransparency = 1
+title.Text = "Kaitun Vyro Hub [Random Fruit 1-50]"
+title.TextColor3 = Color3.fromRGB(150, 50, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.TextStrokeTransparency = 0.3
+title.TextStrokeColor3 = Color3.fromRGB(100, 0, 200)
+title.ZIndex = 3
+title.Parent = background
+
+-- Màu tím để chuyển đổi
+local purpleColors = {
+    Color3.fromRGB(180, 50, 255),
+    Color3.fromRGB(220, 50, 255),
+    Color3.fromRGB(140, 30, 255),
+    Color3.fromRGB(200, 80, 255),
+    Color3.fromRGB(160, 40, 255),
+    Color3.fromRGB(240, 60, 255),
+}
+
+-- Variables cho color cycling
+local currentColorIndex = 1
+local lastColorChange = tick()
+local colorChangeInterval = 2
+
+-- Glow Label
+local glowLabel = Instance.new("TextLabel")
+glowLabel.Size = title.Size
+glowLabel.Position = title.Position
+glowLabel.BackgroundTransparency = 1
+glowLabel.Text = title.Text
+glowLabel.TextColor3 = Color3.fromRGB(200, 100, 255)
+glowLabel.TextScaled = true
+glowLabel.Font = Enum.Font.GothamBold
+glowLabel.TextTransparency = 0.5
+glowLabel.TextStrokeTransparency = 0.5
+glowLabel.TextStrokeColor3 = Color3.fromRGB(150, 0, 255)
+glowLabel.ZIndex = 2
+glowLabel.Parent = background
+
+-- Sparkle timer
+local lastSparkle = tick()
+local sparkleInterval = 0.5
+
+-- Connection variables
+local connections = {}
+
+-- Hàm chuyển màu
+local function cycleColor()
+    if not vyroHub.Parent then return end
+    
+    currentColorIndex = currentColorIndex % #purpleColors + 1
+    local nextColor = purpleColors[currentColorIndex]
+    
+    local tween = TweenService:Create(
+        title,
+        TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+        {TextColor3 = nextColor}
+    )
+    tween:Play()
+end
+
+-- Hàm tạo sparkle
+local function createSparkle()
+    if not background.Parent then return end
+    
+    local sparkle = Instance.new("Frame")
+    sparkle.Size = UDim2.new(0, 4, 0, 4)
+    sparkle.Position = UDim2.new(
+        math.random(5, 95) / 100, 0,
+        math.random(5, 95) / 100, 0
+    )
+    sparkle.BackgroundColor3 = Color3.fromRGB(200, 150, 255)
+    sparkle.BorderSizePixel = 0
+    sparkle.BackgroundTransparency = 0.3
+    sparkle.ZIndex = 2
+    sparkle.Parent = background
+    
+    -- Corner để làm tròn
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = sparkle
+    
+    local tween = TweenService:Create(
+        sparkle,
+        TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 20, 0, 20),
+            Position = UDim2.new(
+                sparkle.Position.X.Scale,
+                sparkle.Position.X.Offset - 8,
+                sparkle.Position.Y.Scale,
+                sparkle.Position.Y.Offset - 8
+            )
+        }
+    )
+    tween:Play()
+    
+    task.delay(2.1, function()
+        if sparkle and sparkle.Parent then
+            sparkle:Destroy()
+        end
+    end)
+end
+
+-- Main update loop
+connections.mainLoop = RunService.Heartbeat:Connect(function()
+    if not vyroHub or not vyroHub.Parent then
+        -- Cleanup
+        for _, conn in pairs(connections) do
+            if conn and conn.Connected then
+                conn:Disconnect()
+            end
+        end
+        if blur and blur.Parent then
+            blur:Destroy()
+        end
+        return
+    end
+    
+    local currentTime = tick()
+    
+    -- Color cycling
+    if currentTime - lastColorChange >= colorChangeInterval then
+        cycleColor()
+        lastColorChange = currentTime
+    end
+    
+    -- Glow effect
+    if glowLabel and glowLabel.Parent then
+        local pulse = (math.sin(currentTime * 2) + 1) / 2
+        local transparency = 0.3 + (pulse * 0.5)
+        glowLabel.TextTransparency = transparency
+        glowLabel.TextStrokeTransparency = transparency * 0.8
+    end
+    
+    -- Sparkle creation
+    if currentTime - lastSparkle >= sparkleInterval then
+        createSparkle()
+        lastSparkle = currentTime
+    end
+end)
+
+-- Hiệu ứng xuất hiện ban đầu
+title.TextTransparency = 1
+title.TextStrokeTransparency = 1
+glowLabel.TextTransparency = 1
+glowLabel.TextStrokeTransparency = 1
+background.BackgroundTransparency = 1
+
+-- Background fade in
+TweenService:Create(
+    background,
+    TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    {BackgroundTransparency = 0.95}
+):Play()
+
+-- Title fade in
+task.wait(0.3)
+TweenService:Create(
+    title,
+    TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    {TextTransparency = 0, TextStrokeTransparency = 0.3}
+):Play()
+
+-- Glow fade in
+TweenService:Create(
+    glowLabel,
+    TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    {TextTransparency = 0.5, TextStrokeTransparency = 0.5}
+):Play()
+
+-- Start color cycling
+task.wait(0.5)
+cycleColor()
+
+-- Cleanup khi player leave
+connections.playerRemoving = Players.PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        for _, conn in pairs(connections) do
+            if conn and conn.Connected then
+                conn:Disconnect()
+            end
+        end
+        if blur and blur.Parent then
+            blur:Destroy()
+        end
+    end
+end)
